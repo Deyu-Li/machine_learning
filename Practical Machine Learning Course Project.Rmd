@@ -1,0 +1,76 @@
+---
+title: "Practical Machine Learning Course Project"
+author: "Deyu Li"
+date: "March 26, 2016"
+output: html_document
+---
+
+Symposis
+
+The goal of the course project is to apply the variables from the data collecting by Jawbone Up, Nike FuelBand, and Fitbit to predict the manner in which they did the exercise.
+
+```{r, echo=TRUE}
+library(caret)
+set.seed(1234)
+```
+
+load the training set.
+
+```{r, echo=TRUE}
+training <- read.csv('pml-training.csv',na.strings = c("NA","#DIV/0!", ""))
+dim(training)
+```
+
+cleaning the data in training set
+
+```{r, echo=TRUE}
+#1 remove first column of id and columns related to subject
+training <- training[, -c(1:7)]
+
+#remove the almost zero variance columns
+NZV <- nearZeroVar(training, saveMetrics=TRUE)
+training <- training[,NZV$nzv==FALSE]
+
+#remove columns with NAs
+NAs <- sapply(training, function(x)!(any(is.na(x))))
+training <- training[,NAs==TRUE]
+```
+
+seperate the training set into two. One for fitting the model and the other one for testing the performance of the model
+
+```{r,echo=TRUE}
+inTrain <- createDataPartition(y=training$classe, p=0.7, list=FALSE)
+training <- training[inTrain,]
+testing <- training[-inTrain,]
+dim(training)
+dim(testing)
+```
+
+Prediction with random forest
+
+```{r,echo=TRUE}
+model <- "model.RData"
+if (!file.exists(model)) {
+   model = train(classe~., method="rf", data=training)
+   save(model, file='model.RData')
+} else {
+  load(file = 'model.RData')
+  }
+predict_training <- predict(model, training)
+confusionMatrix(predict_training, training$classe)
+```
+
+cross validation
+
+```{r,echo=TRUE}
+predict_validation <- predict(model, testing)
+confusionMatrix(predict_validation, testing$classe)
+```
+
+testing with the testing data: The accuracy is 100% after submit to the prediction quiz.
+
+```{r, echo=TRUE}
+testing1 <- read.csv('pml-testing.csv')
+predict_testing <- predict(model, testing1)
+predict_testing
+```
